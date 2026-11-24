@@ -47,7 +47,7 @@ jobs:
               pacman-key --init
               pacman-key --populate archlinux
               pacman -Syu --noconfirm archlinux-keyring
-              pacman -Syu --noconfirm archiso
+              pacman -Syu --noconfirm archiso grub syslinux
               bash puzzle build "$RECIPE"
               ls -lh out/*.iso
             '

@@ -16,6 +16,8 @@ collect_pieces() {
 
   # Buang duplikat paket & aset, pertahankan urutan.
   local tmp
+  # syslinux wajib ada di package list untuk boot mode BIOS pada profil archiso.
+  PUZZLE_PACKAGES+=(syslinux)
   tmp="$(printf '%s\n' "${PUZZLE_PACKAGES[@]}" | dedupe_lines)"
   mapfile -t PUZZLE_PACKAGES <<< "$tmp"
   if [[ ${#PUZZLE_ASSETS[@]} -gt 0 ]]; then
