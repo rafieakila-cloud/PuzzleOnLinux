@@ -1,0 +1,9 @@
+# Keping otomatis — dibuat oleh 'puzzle add htop'.
+# Bebas diedit: tambah paket, service, atau catatan sesuai kebutuhan.
+PIECE_NAME="htop"
+PIECE_TITLE="Keping otomatis: htop"
+PIECE_DESC="Paket Arch 'htop' (dibuat otomatis)"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=("htop")
+PIECE_SERVICES=()
+PIECE_NOTES="Keping generatif. Edit file ini kalau butuh paket tambahan."

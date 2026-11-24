@@ -1,0 +1,8 @@
+PIECE_NAME="system"
+PIECE_TITLE="Monitoring sistem"
+PIECE_DESC="btop, ncdu, duf, lsd, bat, eza, procs"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(btop ncdu duf lsd bat eza procs)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES="Task Manager memakai btop/htop."

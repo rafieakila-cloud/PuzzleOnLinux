@@ -1,0 +1,11 @@
+# Kernel Studio ⚙️ — akses kernel dari prompt.
+PIECE_NAME="kernel-studio"
+PIECE_TITLE="Kernel Studio — otak-atik kernel"
+PIECE_DESC="kernel info/config/params/patch/sysctl/build/revert"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(linux-headers base-devel bc pahole kmod cpio patch git)
+PIECE_SERVICES=()
+PIECE_ASSETS=(
+  usr/local/bin/kernel
+)
+PIECE_NOTES="Contoh: kernel info | kernel config | kernel params | kernel build | kernel revert"

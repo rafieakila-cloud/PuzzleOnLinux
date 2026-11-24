@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Dashboard Puzzle On Linux — ringkasan sistem dalam satu layar.
+clear
+C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_CYAN=$'\033[36m'; C_GREEN=$'\033[32m'; C_DIM=$'\033[2m'
+line() { printf '%s────────────────────────────────────────────────────────────%s\n' "$C_DIM" "$C_RESET"; }
+row()  { printf '  %-16s %s\n' "$1" "$2"; }
+printf '\n%s  PUZZLE STATUS  —  %s%s\n' "$C_BOLD" "$(date '+%d-%m-%Y %H:%M')" "$C_RESET"
+line
+row 'Host'      "$(hostname 2>/dev/null)"
+row 'Kernel'    "$(uname -r)"
+row 'Uptime'    "$(uptime -p 2>/dev/null)"
+row 'CPU'       "$(nproc) core"
+row 'RAM'       "$(free -h | awk '/^Mem:/ {print $3 " / " $2}')"
+row 'Disk /'    "$(df -h / | awk 'NR==2 {print $3 " / " $2 " (" $5 ")"}')"
+line
+printf '%s  JARINGAN%s\n' "$C_BOLD" "$C_RESET"
+ip -br address 2>/dev/null | head -n 5 | sed 's/^/    /'
+line
+printf '%s  KEPIING TERAKIT%s\n' "$C_BOLD" "$C_RESET"
+[[ -f /etc/puzzle/pieces ]] && paste -sd' ' /etc/puzzle/pieces | fold -s -w 58 | sed 's/^/    /'
+line
+row 'Paket'     "$(pacman -Q 2>/dev/null | wc -l) terpasang"
+row 'Taskbar'   "$(wc -l < "${HOME}/.config/bunglon/taskbar" 2>/dev/null || echo 0) pin"
+row 'Firstboot' "$([[ -f /etc/puzzle/.firstboot-done ]] && echo selesai || echo belum)"
+printf '\n%s  Perintah: bunglon help | kernel help | gui help | puzzle doctor%s\n' "$C_GREEN" "$C_RESET"
+printf '\n'

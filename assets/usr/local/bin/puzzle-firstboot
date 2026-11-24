@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Puzzle First Boot — konfigurasi otomatis sekali saat login pertama.
+set -uo pipefail
+MARK='/etc/puzzle/.firstboot-done'
+HOST="$(cat /etc/puzzle/hostname 2>/dev/null || echo puzzle)"
+TZ="$(cat /etc/puzzle/timezone 2>/dev/null || echo Asia/Jakarta)"
+USERNAME="$(cat /etc/puzzle/user 2>/dev/null || echo puzzle)"
+C_RESET=$'\033[0m'; C_CYAN=$'\033[36m'; C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'
+i() { printf '%s[*]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+g() { printf '%s[✓]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+w() { printf '%s[!]%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+
+if (( EUID != 0 )); then
+  command -v sudo >/dev/null 2>&1 && exec sudo -n "$0" "$@" || { w 'First boot butuh root/sudo.'; exit 1; }
+fi
+
+mkdir -p /etc/puzzle
+i 'Puzzle First Boot — menyiapkan sistem otomatis...'
+
+printf '%s\n' "$HOST" > /etc/hostname
+grep -q "[[:space:]]$HOST\$\|[[:space:]]$HOST[[:space:]]" /etc/hosts 2>/dev/null || {
+  printf '127.0.0.1 localhost\n::1       localhost\n127.0.1.1 %s.localdomain %s\n' "$HOST" "$HOST" > /etc/hosts
+}
+g "Hostname: $HOST"
+
+if [[ -f /etc/locale.gen ]]; then
+  sed -i -e 's/^#\?en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' \
+         -e 's/^#\?id_ID.UTF-8 UTF-8/id_ID.UTF-8 UTF-8/' /etc/locale.gen
+  command -v locale-gen >/dev/null 2>&1 && locale-gen >/dev/null 2>&1
+fi
+printf 'LANG=id_ID.UTF-8\n' > /etc/locale.conf
+g 'Locale: id_ID.UTF-8'
+
+if [[ -e "/usr/share/zoneinfo/$TZ" ]]; then
+  ln -sf "/usr/share/zoneinfo/$TZ" /etc/localtime
+  g "Timezone: $TZ"
+else
+  w "Timezone '$TZ' tidak ada, pakai UTC."
+  ln -sf /usr/share/zoneinfo/UTC /etc/localtime
+fi
+
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl enable dhcpcd.service >/dev/null 2>&1 && g 'dhcpcd aktif saat boot' || w 'Gagal aktifkan dhcpcd'
+  systemctl start dhcpcd.service >/dev/null 2>&1 || true
+fi
+
+if ! id -u "$USERNAME" >/dev/null 2>&1; then
+  useradd -m -G wheel "$USERNAME" 2>/dev/null && printf '%s:%s\n' "$USERNAME" "$USERNAME" | chpasswd
+  g "User '$USERNAME' dibuat (password: $USERNAME)"
+fi
+if command -v sudo >/dev/null 2>&1; then
+  printf '%%wheel ALL=(ALL:ALL) ALL\n' > /etc/sudoers.d/puzzle
+  chmod 440 /etc/sudoers.d/puzzle
+fi
+
+if command -v reflector >/dev/null 2>&1; then
+  i 'Menyortir mirror Arch tercepat...'
+  timeout 60 reflector --latest 5 --protocol https --sort rate --save /etc/pacman.d/mirrorlist \
+    >/dev/null 2>&1 && g 'Mirrorlist diperbarui' || w 'Reflector dilewati'
+fi
+
+printf 'done\n' > "$MARK"
+g 'First boot selesai. Sistem siap dipakai.'

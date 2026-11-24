@@ -1,0 +1,21 @@
+# Resep lengkap: semua fitur Puzzle On Linux.
+RECIPE_NAME="bunglon"
+RECIPE_DESC="Semua fitur: Bunglon, Play, Menu, Kernel, GUI Builder, Pro Tools"
+PIECES=(
+  base
+  bash
+  network
+  tools
+  system
+  docs
+  installer
+  auto-setup
+  bunglon-core
+  bunglon-play
+  bunglon-menu
+  kernel-studio
+  gui-builder
+  pro-tools
+  puzzle-info
+  hacking-coding
+)

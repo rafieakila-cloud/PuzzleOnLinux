@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Puzzle Splash — aktifkan logo Puzzle saat boot lewat Plymouth.
+set -uo pipefail
+MKINIT='/etc/mkinitcpio.conf'
+GRUB='/etc/default/grub'
+ENTRY=''
+C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_GREEN=$'\033[32m'; C_CYAN=$'\033[36m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'
+i() { printf '%s[*]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+g() { printf '%s[✓]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+w() { printf '%s[!]%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+e() { printf '%s[x]%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+usage() {
+  cat <<'EOF'
+Puzzle Splash
+
+  puzzle splash on      pasang Plymouth + logo saat boot
+  puzzle splash off     kembalikan ke boot verbose
+  puzzle splash status
+EOF
+}
+backup() { [[ -f "$1" ]] && cp -a "$1" "$1.puzzle-bak"; }
+boot_entry() { local f; for f in /boot/loader/entries/*.conf; do [[ -f "$f" ]] && { printf '%s' "$f"; return 0; }; done; return 1; }
+regenerate() {
+  if command -v grub-mkconfig >/dev/null 2>&1; then
+    grub-mkconfig -o /boot/grub/grub.cfg >/dev/null 2>&1 && g 'grub.cfg diperbarui'
+  elif boot_entry >/dev/null && command -v bootctl >/dev/null 2>&1; then
+    bootctl update >/dev/null 2>&1 && g 'systemd-boot diperbarui'
+  else
+    w 'Bootloader tidak dikenali.'
+  fi
+  command -v mkinitcpio >/dev/null 2>&1 && {
+    mkinitcpio -P >/dev/null 2>&1 && g 'initramfs diperbarui' || w 'mkinitcpio gagal'
+  }
+}
+do_on() {
+  command -v pacman >/dev/null 2>&1 || { e 'Butuh pacman.'; return 1; }
+  i 'Memasang plymouth...'
+  pacman -S --needed --noconfirm plymouth || return 1
+  if [[ -f "$MKINIT" ]]; then
+    backup "$MKINIT"
+    grep -q '\bplymouth\b' "$MKINIT" || {
+      sed -i -E 's/^(HOOKS=.*)base/\1plymouth base/' "$MKINIT"
+      sed -i -E 's/^(HOOKS=.*)udev/\1plymouth udev/' "$MKINIT"
+    }
+  fi
+  if [[ -f "$GRUB" ]]; then
+    backup "$GRUB"
+    sed -i -E 's/^GRUB_CMDLINE_LINUX_DEFAULT="([^"]*)"/GRUB_CMDLINE_LINUX_DEFAULT="\1 quiet splash"/' "$GRUB"
+  elif ENTRY="$(boot_entry)"; then
+    backup "$ENTRY"
+    sed -i -E 's/^options (.*)/options \1 quiet splash/' "$ENTRY"
+  fi
+  regenerate
+  g 'Splash aktif. Reboot untuk melihat logo.'
+}
+do_off() {
+  [[ -f "$MKINIT" ]] && sed -i -E 's/plymouth //g' "$MKINIT"
+  [[ -f "$GRUB" ]] && sed -i -E 's/ quiet splash//g' "$GRUB"
+  ENTRY="$(boot_entry || true)"
+  [[ -n "$ENTRY" && -f "$ENTRY" ]] && sed -i -E 's/ quiet splash//g' "$ENTRY"
+  regenerate
+  g 'Splash dimatikan.'
+}
+do_status() {
+  command -v plymouth >/dev/null 2>&1 && g 'Plymouth terpasang' || w 'Plymouth belum terpasang'
+  grep -q '\bplymouth\b' "$MKINIT" 2>/dev/null && g 'Hook aktif' || w 'Hook belum aktif'
+  grep -q 'splash' "$GRUB" 2>/dev/null && g 'Param splash aktif' || w 'Param splash belum aktif'
+}
+case "${1:-help}" in
+  on) do_on ;; off) do_off ;; status) do_status ;;
+  help|-h|--help|'') usage ;;
+  *) e "Perintah '${1}' tidak dikenal."; usage; exit 1 ;;
+esac

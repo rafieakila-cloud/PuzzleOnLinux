@@ -1,0 +1,8 @@
+PIECE_NAME="database"
+PIECE_TITLE="Database"
+PIECE_DESC="sqlite, postgresql-client, redis"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(sqlite postgresql redis)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES=""

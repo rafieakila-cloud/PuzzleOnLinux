@@ -1,0 +1,8 @@
+PIECE_NAME="security"
+PIECE_TITLE="Keamanan & audit"
+PIECE_DESC="gnupg, openssl, nmap, tcpdump"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(gnupg openssl nmap tcpdump)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES=""

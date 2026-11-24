@@ -1,0 +1,19 @@
+
+ ██████╗ ██╗   ██╗███████╗███╗   ██╗████████╗███████╗
+ ██╔══██╗██║   ██║██╔════╝████╗  ██║╚══██╔══╝██╔════╝
+ ██████╔╝██║   ██║█████╗  ██╔██╗ ██║   ██║   █████╗
+ ██╔═══╝ ██║   ██║██╔══╝  ██║╚██╗██║   ██║   ██╔══╝
+ ██║     ╚██████╔╝███████╗██║ ╚████║   ██║   ███████╗
+ ╚═╝      ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝
+
+        Rakit sistemmu, keping demi keping.  🧩🦎
+
+  /menu/start            buka Start Menu (semua fitur)
+  /taskbar-all           lihat taskbar
+  go-to-taskbar/<app>    pin aplikasi ke taskbar
+  run <nama>             jalankan aplikasi desktop (Bunglon Core)
+  play <nama>            jalankan game (Bunglon Play)
+  kernel info            akses & otak-atik kernel
+  puzzlefetch            fastfetch + logo puzzle & kunci inggris
+  hack help / code help  hacking & coding toolkit
+  bunglon help           semua perintah Bunglon

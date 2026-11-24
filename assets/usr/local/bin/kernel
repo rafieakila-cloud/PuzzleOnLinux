@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+# Kernel Studio ⚙️ — akses & otak-atik kernel dari prompt Puzzle.
+# Selalu backup berkas sebelum mengubah. Build kernel itu berisiko: gadai dulu backup-mu.
+set -uo pipefail
+
+KDIR="/usr/lib/modules/$(uname -r)/build"
+[[ -d "$KDIR" ]] || KDIR="/usr/src/linux"
+KCFG="${HOME:-/root}/.config/puzzle/kernel"
+SYSCTL='/etc/sysctl.d/99-puzzle.conf'
+GRUB='/etc/default/grub'
+BOOTENTRY=''
+
+C_RESET=$'\033[0m'; C_GREEN=$'\033[32m'; C_CYAN=$'\033[36m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'; C_BOLD=$'\033[1m'
+i() { printf '%s[*]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+g() { printf '%s[✓]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+w() { printf '%s[!]%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+e() { printf '%s[x]%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+
+mkdir -p "$KCFG"
+
+usage() {
+  cat <<'EOF'
+Kernel Studio ⚙️ — otak-atik kernel Puzzle sesuai selera.
+
+  kernel info                  versi, cmdline, modul yang aktif
+  kernel modules               daftar modul (lsmod)
+  kernel module-load <nama>    modprobe modul
+  kernel module-unload <nama>  modprobe -r modul
+  kernel params                lihat/edit parameter boot (cmdline)
+  kernel config                ambil .config kernel, lalu edit
+  kernel patch <file.patch>    apply patch ke source kernel
+  kernel sysctl                edit /etc/sysctl.d/99-puzzle.conf
+  kernel build                 build + install kernel hasil edit
+  kernel revert                kembalikan backup .config & cmdline
+  kernel help                  tampilkan ini
+
+PERINGATAN: 'kernel build' mengganti kernel yang dipakai.
+Simpan backup & siapkan live USB sebelum mencoba.
+EOF
+}
+
+backup() {
+  local f="$1"
+  [[ -f "$f" ]] || return 0
+  local b="$KCFG/$(basename "$f").puzzle-bak"
+  cp -a "$f" "$b"
+  g "Backup: $b"
+}
+
+find_boot_entry() {
+  local f
+  for f in /boot/loader/entries/*.conf; do
+    [[ -f "$f" ]] && { printf '%s' "$f"; return 0; }
+  done
+  return 1
+}
+
+do_info() {
+  printf '%sKernel%s\n' "$C_BOLD" "$C_RESET"
+  uname -a
+  printf '\n%sVersi:%s\n' "$C_BOLD" "$C_RESET"
+  zcat /proc/config.gz 2>/dev/null | grep -m1 '^# Linux/' || cat /proc/version 2>/dev/null
+  printf '\n%sCmdline boot:%s\n' "$C_BOLD" "$C_RESET"
+  cat /proc/cmdline 2>/dev/null
+  printf '\n%sModul aktif:%s ' "$C_BOLD" "$C_RESET"
+  lsmod 2>/dev/null | tail -n +2 | wc -l
+  printf '%sSource build:%s %s\n' "$C_BOLD" "$C_RESET" "$KDIR"
+}
+
+do_modules() { lsmod 2>/dev/null | head -n 80; }
+do_mod_load() {
+  local m="${1:-}"; [[ -n "$m" ]] || { e 'Usage: kernel module-load <nama>'; return 1; }
+  modprobe "$m" && g "Modul '$m' dimuat."
+}
+do_mod_unload() {
+  local m="${1:-}"; [[ -n "$m" ]] || { e 'Usage: kernel module-unload <nama>'; return 1; }
+  modprobe -r "$m" && g "Modul '$m' dibongkar."
+}
+
+do_params() {
+  i "Cmdline saat ini:"; cat /proc/cmdline 2>/dev/null; printf '\n'
+  local target=''
+  if [[ -f "$GRUB" ]]; then target="$GRUB"
+  elif BOOTENTRY="$(find_boot_entry)"; then target="$BOOTENTRY"
+  else e 'Tidak ada GRUB/systemd-boot entry yang ditemukan.'; return 1; fi
+  i "Menyunting: $target"
+  backup "$target"
+  "${EDITOR:-vi}" "$target"
+  if [[ "$target" == "$GRUB" ]]; then
+    command -v grub-mkconfig >/dev/null 2>&1 && grub-mkconfig -o /boot/grub/grub.cfg
+  else
+    command -v bootctl >/dev/null 2>&1 && bootctl update
+  fi
+  g "Parameter boot diperbarui. Reboot untuk menerapkan."
+}
+
+do_config() {
+  local src='' dst="$KCFG/.config"
+  if [[ -r /proc/config.gz ]]; then zcat /proc/config.gz > "$dst"
+  elif [[ -f "/boot/config-$(uname -r)" ]]; then cp "/boot/config-$(uname -r)" "$dst"
+  elif [[ -f "$KDIR/.config" ]]; then cp "$KDIR/.config" "$dst"
+  else e 'Tidak menemukan .config kernel. Install linux-headers dulu.'; return 1; fi
+  g "Config diambil: $dst"
+  backup "$dst"
+  "${EDITOR:-vi}" "$dst"
+  i "Simpan hasil edit ke source build? (y/N)"
+  read -r ans
+  if [[ "$ans" == 'y' || "$ans" == 'Y' ]]; then
+    [[ -d "$KDIR" ]] || { e "Source build tidak ada: $KDIR"; return 1; }
+    backup "$KDIR/.config"
+    cp "$dst" "$KDIR/.config"
+    g "Config disalin ke $KDIR/.config"
+  fi
+}
+
+do_patch() {
+  local p="${1:-}"; [[ -n "$p" && -f "$p" ]] || { e 'Usage: kernel patch <file.patch>'; return 1; }
+  [[ -d "$KDIR" ]] || { e "Source kernel tidak ada: $KDIR"; return 1; }
+  i "Menerapkan patch $p ke $KDIR"
+  (cd "$KDIR" && patch -p1 --backup < "$p") && g 'Patch diterapkan.'
+}
+
+do_sysctl() {
+  [[ -f "$SYSCTL" ]] || { printf '# Puzzle kernel tuning\n' > "$SYSCTL"; }
+  backup "$SYSCTL"
+  "${EDITOR:-vi}" "$SYSCTL"
+  sysctl --system >/dev/null 2>&1 && g 'sysctl diterapkan.'
+}
+
+do_build() {
+  [[ -d "$KDIR" ]] || { e "Source kernel tidak ada. Install: pacman -S linux-headers base-devel"; return 1; }
+  command -v make >/dev/null 2>&1 || { e 'make tidak ditemukan. Install base-devel.'; return 1; }
+  w 'Ini akan mengganti kernel aktif. Backup sudah disimpan di:' "$KCFG"
+  read -rp '  Lanjut build? (ketik YA): ' ans
+  [[ "$ans" == 'YA' ]] || { w 'Dibatalkan.'; return 1; }
+
+  local jobs; jobs="$(nproc)"
+  i "make olddefconfig"
+  (cd "$KDIR" && make olddefconfig) || return 1
+  i "make -j$jobs"
+  (cd "$KDIR" && make -j"$jobs") || return 1
+  i "make modules_install"
+  (cd "$KDIR" && make modules_install) || return 1
+  i "make install"
+  (cd "$KDIR" && make install) || return 1
+  if command -v mkinitcpio >/dev/null 2>&1; then
+    i "mkinitcpio -p linux"
+    mkinitcpio -p linux || return 1
+  fi
+  g 'Kernel selesai dipasang. Reboot untuk memakainya.'
+}
+
+do_revert() {
+  local b
+  for b in "$KCFG"/*.puzzle-bak; do
+    [[ -f "$b" ]] || continue
+    local name target
+    name="$(basename "$b" .puzzle-bak)"
+    case "$name" in
+      grub)          target="$GRUB" ;;
+      .config)       target="$KCFG/.config" ;;
+      99-puzzle.conf) target="$SYSCTL" ;;
+      *.conf)        target="$(find_boot_entry || true)" ;;
+      *)             target="$KDIR/.config" ;;
+    esac
+    [[ -n "$target" ]] || continue
+    backup "$target"
+    cp -a "$b" "$target"
+    g "Dikembalikan: $target"
+  done
+  i "Jalankan ulang grub-mkconfig/bootctl update bila perlu, lalu reboot."
+}
+
+case "${1:-help}" in
+  info)           do_info ;;
+  modules|mods)   do_modules ;;
+  module-load)    shift; do_mod_load "$@" ;;
+  module-unload)  shift; do_mod_unload "$@" ;;
+  params|cmdline) do_params ;;
+  config)         do_config ;;
+  patch)          shift; do_patch "$@" ;;
+  sysctl|tuning)  do_sysctl ;;
+  build)          do_build ;;
+  revert)         do_revert ;;
+  help|-h|--help|'') usage ;;
+  *) e "Perintah '${1}' tidak dikenal."; usage; return 1 2>/dev/null || exit 1 ;;
+esac

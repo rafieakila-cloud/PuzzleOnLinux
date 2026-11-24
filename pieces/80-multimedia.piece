@@ -1,0 +1,8 @@
+PIECE_NAME="multimedia"
+PIECE_TITLE="Multimedia CLI"
+PIECE_DESC="ffmpeg, mpv, cmus, imagemagick"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(ffmpeg mpv cmus imagemagick)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES=""

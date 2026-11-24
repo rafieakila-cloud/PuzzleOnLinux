@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Jalankan game dari terminal (Bunglon Play).
+exec bunglon play "$@"

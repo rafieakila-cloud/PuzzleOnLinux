@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Puzzle On Linux — CLI perakit distro terminal-only berbasis Arch.
+set -euo pipefail
+
+PUZZLE_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export PUZZLE_ROOT
+
+# shellcheck source=lib/common.sh
+source "$PUZZLE_ROOT/lib/common.sh"
+# shellcheck source=lib/pieces.sh
+source "$PUZZLE_ROOT/lib/pieces.sh"
+# shellcheck source=lib/build.sh
+source "$PUZZLE_ROOT/lib/build.sh"
+
+usage() {
+  cat <<'EOF'
+Puzzle On Linux 🧩  —  rakit sistemmu, keping demi keping.
+
+Pemakaian:
+  ./puzzle list                       tampilkan katalog keping & resep
+  ./puzzle show <keping>              detail sebuah keping
+  ./puzzle init <nama>                buat resep baru dari template
+  ./puzzle add <keping> [resep]       tambah keping ke resep
+  ./puzzle remove <keping> [resep]    buang keping dari resep
+  ./puzzle build [resep]              rakit ISO (butuh archiso)
+  ./puzzle clean                      bersihkan workspace build
+  ./puzzle ui [berkas]                oprek UI/sistem (configs/airootfs)
+  ./puzzle help                       tampilkan ini
+
+Contoh:
+  ./puzzle init racikanku
+  ./puzzle add tools racikanku
+  ./puzzle build racikanku
+EOF
+}
+
+cmd="${1:-help}"
+if [[ $# -gt 0 ]]; then shift; fi
+
+case "$cmd" in
+  list)          cmd_list "$@" ;;
+  ls)            cmd_list "$@" ;;
+  show)          cmd_show "$@" ;;
+  info)          cmd_show "$@" ;;
+  init)          cmd_init "$@" ;;
+  add)           cmd_add "$@" ;;
+  remove|rm)     cmd_remove "$@" ;;
+  build)         cmd_build "$@" ;;
+  clean)         cmd_clean ;;
+  ui)            cmd_ui "$@" ;;
+  help|-h|--help) usage ;;
+  *) die "Perintah '$cmd' tidak dikenal. Coba: ./puzzle help" ;;
+esac

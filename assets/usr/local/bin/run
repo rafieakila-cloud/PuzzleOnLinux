@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Jalankan aplikasi desktop dari terminal (Bunglon Core).
+exec bunglon run "$@"

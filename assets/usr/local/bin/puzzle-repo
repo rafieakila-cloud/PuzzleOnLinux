@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Puzzle Repo — kelola repository pacman tambahan (software buatan sendiri).
+set -uo pipefail
+INC='/etc/pacman.d/puzzle-repo.conf'
+C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_GREEN=$'\033[32m'; C_CYAN=$'\033[36m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'
+i() { printf '%s[*]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+g() { printf '%s[✓]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+w() { printf '%s[!]%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+e() { printf '%s[x]%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+usage() {
+  cat <<'EOF'
+Puzzle Repo
+
+  puzzle repo add <nama> <url|path>   tambah repo
+  puzzle repo list                   lihat repo
+  puzzle repo remove <nama>          buang repo
+  puzzle repo sync                   pacman -Sy
+EOF
+}
+ensure_include() {
+  grep -q '^Include = /etc/pacman.d/puzzle-repo.conf' /etc/pacman.conf 2>/dev/null || {
+    printf '\nInclude = /etc/pacman.d/puzzle-repo.conf\n' >> /etc/pacman.conf
+    g 'Include ditambahkan ke /etc/pacman.conf'
+  }
+  touch "$INC"
+}
+do_add() {
+  local name="${1:-}" url="${2:-}"
+  [[ -n "$name" && -n "$url" ]] || { e 'Usage: puzzle repo add <nama> <url|path>'; return 1; }
+  ensure_include
+  grep -q "^\[$name\]" "$INC" 2>/dev/null && { w "Repo '$name' sudah ada."; return 0; }
+  cat >> "$INC" <<EOF
+
+[$name]
+SigLevel = Optional TrustAll
+Server = $url
+EOF
+  g "Repo '$name' ditambahkan."
+  pacman -Sy 2>/dev/null || w 'pacman -Sy gagal — cek URL.'
+}
+do_list() {
+  printf '%sRepo terdaftar:%s\n' "$C_BOLD" "$C_RESET"
+  [[ -f "$INC" ]] && grep '^\[' "$INC" | tr -d '[]' | sed 's/^/  /' || printf '  (belum ada)\n'
+}
+do_remove() {
+  local name="${1:-}"
+  [[ -n "$name" ]] || { e 'Usage: puzzle repo remove <nama>'; return 1; }
+  [[ -f "$INC" ]] || { w 'Belum ada repo.'; return 0; }
+  awk -v n="[$name]" '$0 == n {skip=1; next} /^\[/ && skip {skip=0} !skip {print}' \
+    "$INC" > "$INC.tmp" && mv "$INC.tmp" "$INC"
+  g "Repo '$name' dibuang."
+}
+case "${1:-help}" in
+  add) shift; do_add "$@" ;;
+  list) do_list ;;
+  remove|rm) shift; do_remove "$@" ;;
+  sync) pacman -Sy ;;
+  help|-h|--help|'') usage ;;
+  *) e "Perintah '${1}' tidak dikenal."; usage; exit 1 ;;
+esac

@@ -1,0 +1,8 @@
+PIECE_NAME="network"
+PIECE_TITLE="Jaringan dasar"
+PIECE_DESC="dhcpcd, iproute2, iputils, wpa_supplicant"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(dhcpcd iproute2 iputils wpa_supplicant wireless-tools)
+PIECE_SERVICES=(dhcpcd.service)
+PIECE_ASSETS=()
+PIECE_NOTES=""

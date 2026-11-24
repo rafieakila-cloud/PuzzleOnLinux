@@ -1,0 +1,8 @@
+PIECE_NAME="containers"
+PIECE_TITLE="Container"
+PIECE_DESC="podman, docker-cli, buildah, skopeo"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(podman docker-cli buildah skopeo)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES=""

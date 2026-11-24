@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Puzzle On Linux — fastfetch dengan logo puzzle + kunci inggris.
+if command -v fastfetch >/dev/null 2>&1; then
+  exec fastfetch --config /etc/fastfetch/puzzle.conf "$@"
+fi
+printf 'fastfetch belum terpasang. Tambah keping: ./puzzle add puzzle-info\n'

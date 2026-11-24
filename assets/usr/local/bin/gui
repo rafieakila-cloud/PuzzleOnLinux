@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# GUI Builder — pengguna bisa membangun & menjalankan GUI kapan saja.
+# Boot Puzzle On Linux tetap terminal-only.
+set -uo pipefail
+STATE="${HOME:-/root}/.config/puzzle/gui"
+CFG="$STATE/config"
+MODE='openbox'
+DISPLAY_NUM="${GUI_DISPLAY_NUM:-98}"
+[[ -f "$CFG" ]] && source "$CFG"
+C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_GREEN=$'\033[32m'; C_CYAN=$'\033[36m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'
+i() { printf '%s[*]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+g() { printf '%s[✓]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+w() { printf '%s[!]%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+e() { printf '%s[x]%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+mkdir -p "$STATE"
+usage() {
+  cat <<'EOF'
+GUI Builder — bangun GUI untuk Puzzle On Linux (tanpa ubah boot).
+
+  gui build [openbox|xfce]   install komponen GUI
+  gui start                  jalankan di display :98 (VNC port 5998)
+  gui stop                   matikan GUI
+  gui status                 lihat mode & proses
+EOF
+}
+pkgs_for() {
+  case "$1" in
+    openbox) printf '%s\n' xorg-server xorg-xinit openbox tint2 xterm x11vnc ;;
+    xfce)    printf '%s\n' xorg-server xorg-xinit xfce4 x11vnc ;;
+    *) return 1 ;;
+  esac
+}
+do_build() {
+  local m="${1:-$MODE}"
+  pkgs_for "$m" >/dev/null || { e "Mode '$m' tidak dikenal."; return 1; }
+  command -v pacman >/dev/null 2>&1 || { e 'Butuh pacman.'; return 1; }
+  i "Membangun GUI mode: $m"
+  mapfile -t p < <(pkgs_for "$m")
+  pacman -S --needed --noconfirm "${p[@]}" || return 1
+  case "$m" in
+    openbox) printf 'exec openbox-session\n' > "$HOME/.xinitrc" ;;
+    xfce)    printf 'exec startxfce4\n' > "$HOME/.xinitrc" ;;
+  esac
+  printf 'MODE="%s"\n' "$m" > "$CFG"
+  g "GUI '$m' siap. Jalankan: gui start"
+}
+do_start() {
+  [[ -f "$CFG" ]] && source "$CFG"
+  command -v startx >/dev/null 2>&1 || { e "GUI belum dibangun: gui build $MODE"; return 1; }
+  if xdpyinfo -display ":$DISPLAY_NUM" >/dev/null 2>&1; then
+    w "Display :$DISPLAY_NUM sudah aktif."
+  else
+    command -v Xvfb >/dev/null 2>&1 || { e 'Xvfb belum ada.'; return 1; }
+    Xvfb ":$DISPLAY_NUM" -screen 0 1280x800x24 -nolisten tcp >"$HOME/.local/state/gui-xvfb.log" 2>&1 &
+    sleep 1
+  fi
+  command -v x11vnc >/dev/null 2>&1 && {
+    x11vnc -display ":$DISPLAY_NUM" -nopw -forever -listen 0.0.0.0 -rfbport 5998 \
+      >"$HOME/.local/state/gui-vnc.log" 2>&1 &
+  }
+  DISPLAY=":$DISPLAY_NUM" nohup startx "$HOME/.xinitrc" -- ":$DISPLAY_NUM" \
+    >"$HOME/.local/state/gui.log" 2>&1 &
+  g "GUI jalan di :$DISPLAY_NUM (VNC 5998)."
+}
+do_stop() {
+  pkill -f 'openbox-session|startxfce4|Xvfb :'"$DISPLAY_NUM"'|x11vnc.*5998' 2>/dev/null || true
+  g 'GUI dimatikan.'
+}
+do_status() {
+  printf '%sGUI Builder%s\n' "$C_BOLD" "$C_RESET"
+  printf '  Mode    : %s\n  Display : :%s\n  Config  : %s\n' "$MODE" "$DISPLAY_NUM" "$CFG"
+  ps aux | grep -E 'openbox|xfce|Xvfb|x11vnc' | grep -v grep || printf '  (tidak ada proses)\n'
+}
+case "${1:-help}" in
+  build) shift; do_build "$@" ;; start) do_start ;; stop) do_stop ;; status) do_status ;;
+  help|-h|--help|'') usage ;;
+  *) e "Perintah '${1}' tidak dikenal."; usage; exit 1 ;;
+esac

@@ -1,0 +1,4 @@
+# Contoh resep untuk development.
+RECIPE_NAME="developer"
+RECIPE_DESC="Contoh: tools + dev + docs"
+PIECES=( base bash network tools dev docs installer )

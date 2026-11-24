@@ -1,0 +1,8 @@
+PIECE_NAME="docs"
+PIECE_TITLE="Dokumentasi lokal"
+PIECE_DESC="man-db, man-pages, texinfo"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(man-db man-pages texinfo)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES="Cari docs: man <perintah>  |  Bunglon: bunglon search <kata>"

@@ -1,0 +1,8 @@
+PIECE_NAME="dev"
+PIECE_TITLE="Tool development"
+PIECE_DESC="base-devel, gdb, cmake, python, nodejs, go"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(base-devel gdb cmake python python-pip nodejs npm go)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES=""

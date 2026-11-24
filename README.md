@@ -1,48 +1,91 @@
-# Katak Files
+# Puzzle On Linux 🧩
 
-Suite file manager untuk Windows — ringan, tanpa Electron, dibuat dari nol.
+> *Rakit sistemmu, keping demi keping.*
 
-- **Publisher / Developer:** bawapi-katak
-- **Platform:** Windows 10/11 (x64)
+**Puzzle On Linux** adalah distro Linux **terminal-only** berbasis **Arch** yang diposisikan sebagai **kotak perakit**, bukan distro "jadi" untuk satu tujuan. Kamu memilih kepingan, Puzzle merakitnya jadi **ISO bootable** untuk VM (VirtualBox/QEMU) maupun flash ke PC.
 
-## Aplikasi yang termasuk
+| Item | Nilai |
+|---|---|
+| Basis | Arch Linux (`archiso`) |
+| Tampilan | Terminal saja saat boot |
+| Shell | `bash` |
+| Arsitektur | `x86_64` |
+| Output | `out/puzzle-on-linux-<resep>-x86_64.iso` |
+| Fitur | Bunglon 🦎, Play 🎮, Start Menu/Taskbar, Kernel Studio ⚙️, GUI Builder 🖥️, Pro Tools, Hacking & Coding |
 
-### 1. KatakFILES — file manager GUI (tema 32-bit klasik)
-- Navigasi folder, sidebar Akses cepat + semua drive + WSL bila ada
-- Double-click membuka, copy/cut/paste, rename, hapus ke Recycle Bin
-- **Animasi kodok** membersihkan diri saat hapus file besar (≥ 500 MB)
-- ZIP: extract / compress / zip-slip protection
-- Drag & drop dari Explorer + seret antar-folder di dalam app
-- Ikon: Segoe MDL2 Assets
+## Fitur
 
-### 2. Katak-Files Administrator — file manager terminal (TUI)
-- Gaya ranger: keyboard-only, tiga panel, preview teks
-- **Mode PSB** (Pembersih Sampah): scan sampah `.exe` & `.zip` di Downloads/Desktop/TEMP
-- **ICUL**: hapus paksa ke Recycle Bin (dengan tandai/ space/semua)
-- Buat ZIP dari item terpilih, buka GUI dari folder yang sedang dilihat (`G`)
+- **Bunglon Core** — `run <app>` download + jalankan aplikasi desktop lewat `pacman`
+- **Bunglon Play** — `play <game>` download + jalankan game
+- **Start Menu** — `/menu/start` berisi semua fitur (mapping menu Windows)
+- **Taskbar** — `/taskbar-all`, `go-to-taskbar/<app>`, `/uninstalled b- <app>`
+- **Kernel Studio** — `kernel info/config/params/patch/sysctl/build/revert` dengan backup
+- **Auto Setup** — hostname, locale Indonesia, timezone, DHCP, user, sudo, mirror otomatis
+- **GUI Builder** — `gui build openbox|xfce` + `gui start`, boot tetap terminal
+- **Pro Tools** — `puzzle status/doctor/snapshot/update/repo/splash`
+- **Puzzle Info** — `puzzlefetch` (fastfetch + logo puzzle & kunci inggris), btop/htop
+- **Hacking & Coding** — `hack ...` dan `code new/build/run`
+- **Bisa dioprek** — `configs/airootfs/` bebas diedit
 
-## Download & Install
+## Cara build ISO
 
-Lihat **Releases**: `KatakFILES-Setup.exe` (GUI) dan
-`Katak-Files-Administrator-Setup.exe` (TUI). Keduanya installer asli
-(Inno Setup) — install/uninstall lewat Settings → Apps.
+ISO **tidak bisa dibuat di Windows**. Dua pilihan:
 
-## Roadmap
+### A. GitHub Actions (paling gampang)
+1. Push repo ini ke GitHub (branch `main`).
+2. **Actions → Build Puzzle On Linux ISO → Run workflow** (resep: `bunglon`).
+3. Download artifact `puzzle-on-linux-bunglon`.
+4. File di dalamnya: `puzzle-on-linux-bunglon-x86_64.iso`.
 
-- 12 & 25 November 2026 — Update Batch
-- 2, 4, 12 Desember 2026 — Patch
-- **2027 — Katak Files 2** — akan dipamerkan di rilis mendatang; **belum bisa di-download**
-- **Katak Files Terminal** — file manager berbasis terminal penuh (sudah rilis: Katak-Files Administrator)
+### B. Arch Linux lokal
+```bash
+sudo pacman -S archiso git
+git clone <repo> PuzzleOnLinux && cd PuzzleOnLinux
+./puzzle build bunglon
+```
 
-## Katak Files 2 (2027) — Showcase
+## Pakai di VirtualBox
 
-Belum dirilis, belum bisa di-download. Rencana resmi: hadir pada 2027 sebagai
-generasi berikut Katak Files Suite.
+1. Buka VirtualBox → **New**.
+2. Name: `Puzzle On Linux`, Type: **Linux**, Version: **Arch Linux (64-bit)**.
+3. Memory: **2048 MB** (minimum 1024 MB).
+4. Hard disk: **Create a virtual hard disk now** → VDI → ** dynamically allocated** → 20 GB.
+5. Setelah VM dibuat: **Settings → Storage → Optical Drive → pilih ISO** yang di-download.
+6. **Settings → System → Processor** → centang **Enable PAE/NX**, 2 CPU.
+7. Klik **Start** → boot ke prompt `puzzle@piece:~$`.
 
-## Kontribusi
+Kalau mau coba tanpa VirtualBox:
+```bash
+qemu-system-x86_64 -m 2048 -cdrom out/puzzle-on-linux-bunglon-x86_64.iso -boot d
+```
 
-Hanya Rafie Akila (bawapi-katak). Tidak ada kontributor lain untuk saat ini.
+## Perintah setelah boot
 
-## Catatan jujur
+```
+/menu/start                  Start Menu
+/taskbar-all                 taskbar
+go-to-taskbar/firefox        pin aplikasi
+run firefox                  jalankan aplikasi desktop
+play supertux                jalankan game
+kernel info                  akses kernel
+puzzlefetch                  info sistem + logo puzzle & kunci inggris
+bunglon task                 task manager (btop/htop)
+gui build openbox            bangun GUI on-demand
+puzzle doctor                cek kesehatan sistem
+puzzle snapshot create       backup sebelum otak-atik
+hack scan <host>             toolkit hacking
+code new py hello            coding helper
+```
 
-Ini v1.0.0 — belum semua fitur "File Explorer sungguhan" ada, dan lapor bug lewat Issue repo ini.
+## Dokumentasi
+
+- [`docs/PIECES.md`](docs/PIECES.md) — format keping & daftar keping
+- [`docs/BUILD.md`](docs/BUILD.md) — build, GitHub Actions, troubleshooting
+- [`docs/BUNGLON.md`](docs/BUNGLON.md) — aplikasi, game, Start Menu, taskbar
+- [`docs/KERNEL.md`](docs/KERNEL.md) — akses kernel
+- [`docs/PRO.md`](docs/PRO.md) — GUI builder, pro tools
+- [`docs/EXTRA.md`](docs/EXTRA.md) — fastfetch, task manager, hacking & coding
+
+## Catatan
+
+File lama `KatakFILES/...` sudah terhapus dari awal dan tidak disentuh. Belum ada commit.

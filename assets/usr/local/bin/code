@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Coding Helper — bikin & jalankan proyek kecil dari terminal.
+set -uo pipefail
+C_RESET=$'\033[0m'; C_GREEN=$'\033[32m'; C_CYAN=$'\033[36m'; C_RED=$'\033[31m'
+i() { printf '%s[*]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+g() { printf '%s[✓]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+e() { printf '%s[x]%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+usage() {
+  cat <<'EOF'
+Coding Helper
+
+  code new <c|cpp|py|sh|js|go|rs> <nama>   buat template
+  code run <file>                          jalankan
+  code build <file>                        compile
+EOF
+}
+do_new() {
+  local lang="${1:-}" name="${2:-}"
+  [[ -n "$lang" && -n "$name" ]] || { e 'Usage: code new <c|cpp|py|sh|js|go|rs> <nama>'; return 1; }
+  case "$lang" in
+    c) cat > "$name.c" <<'EOF'
+#include <stdio.h>
+int main(void) { printf("Hello Puzzle On Linux!\n"); return 0; }
+EOF
+    ;;
+    cpp) cat > "$name.cpp" <<'EOF'
+#include <iostream>
+int main() { std::cout << "Hello Puzzle On Linux!" << std::endl; }
+EOF
+    ;;
+    py) cat > "$name.py" <<'EOF'
+#!/usr/bin/env python3
+print("Hello Puzzle On Linux!")
+EOF
+    ;;
+    sh) cat > "$name.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "Hello Puzzle On Linux!"
+EOF
+    ;;
+    js) cat > "$name.js" <<'EOF'
+console.log("Hello Puzzle On Linux!");
+EOF
+    ;;
+    go) cat > "$name.go" <<'EOF'
+package main
+import "fmt"
+func main() { fmt.Println("Hello Puzzle On Linux!") }
+EOF
+    ;;
+    rs) cat > "$name.rs" <<'EOF'
+fn main() { println!("Hello Puzzle On Linux!"); }
+EOF
+    ;;
+    *) e "Bahasa '$lang' belum didukung."; return 1 ;;
+  esac
+  chmod +x "$name.$lang" 2>/dev/null || true
+  g "Dibuat: $name.$lang"
+}
+do_build() {
+  local f="${1:-}"; [[ -f "$f" ]] || { e "File '$f' tidak ada."; return 1; }
+  case "$f" in
+    *.c) gcc "$f" -o "${f%.c}" && g "Binary: ${f%.c}" ;;
+    *.cpp) g++ "$f" -o "${f%.cpp}" && g "Binary: ${f%.cpp}" ;;
+    *.rs) rustc "$f" -o "${f%.rs}" && g "Binary: ${f%.rs}" ;;
+    *.go) go build -o "${f%.go}" "$f" && g "Binary: ${f%.go}" ;;
+    *) e "Build otomatis belum didukung." ;;
+  esac
+}
+do_run() {
+  local f="${1:-}"; [[ -f "$f" ]] || { e "File '$f' tidak ada."; return 1; }
+  case "$f" in
+    *.py) python "$f" ;;
+    *.sh) bash "$f" ;;
+    *.js) node "$f" ;;
+    *.go) go run "$f" ;;
+    *.rs) do_build "$f" && "./${f%.rs}" ;;
+    *.c) do_build "$f" && "./${f%.c}" ;;
+    *.cpp) do_build "$f" && "./${f%.cpp}" ;;
+    *) e "Run otomatis belum didukung." ;;
+  esac
+}
+case "${1:-help}" in
+  new) shift; do_new "$@" ;; build) shift; do_build "$@" ;; run) shift; do_run "$@" ;;
+  help|-h|--help|'') usage ;;
+  *) e "Perintah '${1}' tidak dikenal."; usage; exit 1 ;;
+esac

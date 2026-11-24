@@ -1,0 +1,8 @@
+PIECE_NAME="installer"
+PIECE_TITLE="Installer teks"
+PIECE_DESC="archinstall, gptfdisk, dosfstools, e2fsprogs"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(archinstall gptfdisk dosfstools e2fsprogs)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES="Di dalam ISO: jalankan 'archinstall' untuk pasang Puzzle ke disk."

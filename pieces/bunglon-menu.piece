@@ -1,0 +1,9 @@
+# Bunglon Menu + taskbar — "Start Menu" ala Puzzle di terminal.
+PIECE_NAME="bunglon-menu"
+PIECE_TITLE="Bunglon Menu & Taskbar"
+PIECE_DESC="/menu/start, /taskbar-all, go-to-taskbar/<app>, /uninstalled"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(btop fzf ranger tmux)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES="Menu lengkap ada di bunglon script (bunglon-core). Keping ini menyediakan tool untuk tiap menu."

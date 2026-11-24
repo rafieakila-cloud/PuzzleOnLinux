@@ -1,0 +1,4 @@
+# Resep minimal — contoh dasar. Bebas diubah/dihapus.
+RECIPE_NAME="minimal"
+RECIPE_DESC="Puzzle paling ringan: boot ke bash"
+PIECES=( base bash network docs )

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Hacking Toolkit — tool keamanan jaringan. Pakai hanya pada target yang diizinkan.
+set -uo pipefail
+C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_CYAN=$'\033[36m'; C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'
+i() { printf '%s[*]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+g() { printf '%s[✓]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+w() { printf '%s[!]%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+e() { printf '%s[x]%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+need() { command -v "$1" >/dev/null 2>&1 || { e "Butuh '$1'."; return 1; }; }
+usage() {
+  cat <<'EOF'
+Hacking Toolkit
+
+  hack scan <host>       nmap -sV -T4
+  hack ports <host>      nmap -p-
+  hack sniff [iface]     tshark (default eth0)
+  hack wifi              info wifi & aircrack
+  hack hash <file>       john + wordlist
+  hack dns <domain>      dig A/MX
+EOF
+}
+case "${1:-help}" in
+  scan)
+    shift; t="${1:-}"; [[ -n "$t" ]] || { e 'Usage: hack scan <host>'; exit 1; }
+    need nmap || exit 1; i "Scanning $t"; nmap -sV -T4 "$t" ;;
+  ports)
+    shift; t="${1:-}"; [[ -n "$t" ]] || { e 'Usage: hack ports <host>'; exit 1; }
+    need nmap || exit 1; nmap -p- "$t" ;;
+  sniff)
+    shift; iface="${1:-eth0}"; need tshark || exit 1
+    i "Tangkap paket di $iface (Ctrl+C berhenti)"; tshark -i "$iface" ;;
+  wifi)
+    need iw || exit 1; i 'Interface wifi:'; iw dev 2>/dev/null
+    for t in aircrack-ng airodump-ng; do
+      command -v "$t" >/dev/null 2>&1 && g "$t tersedia" || w "$t belum ada"
+    done ;;
+  hash)
+    shift; f="${1:-}"; [[ -n "$f" ]] || { e 'Usage: hack hash <file>'; exit 1; }
+    need john || exit 1; read -rp 'Wordlist [/usr/share/wordlists/rockyou.txt]: ' wl
+    wl="${wl:-/usr/share/wordlists/rockyou.txt}"; john --wordlist="$wl" "$f" ;;
+  dns)
+    shift; d="${1:-}"; [[ -n "$d" ]] || { e 'Usage: hack dns <domain>'; exit 1; }
+    need dig || exit 1; dig +short "$d" A "$d" MX ;;
+  help|-h|--help|'') usage ;;
+  *) e "Perintah '${1}' tidak dikenal."; usage; exit 1 ;;
+esac

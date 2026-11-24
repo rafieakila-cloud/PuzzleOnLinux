@@ -1,6 +1,21 @@
-KatakWeb/
+# Build artifacts
+out/
+obj/
+dest/
+release/
+/work/
+*.iso
+*.vdi
+*.tgz
+*.log
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+
+# Python
 __pycache__/
-dist/
-build/
-*.spec
-*-Setup.exe
+*.pyc
+.env
+

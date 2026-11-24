@@ -1,0 +1,9 @@
+# Keping wajib — fondasi sistem.
+PIECE_NAME="base"
+PIECE_TITLE="Fondasi Puzzle"
+PIECE_DESC="kernel, firmware, dan sistem dasar Arch"
+PIECE_REQUIRED=1
+PIECE_PACKAGES=(base linux linux-firmware)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES="Jangan dibuang dari resep."

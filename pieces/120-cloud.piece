@@ -1,0 +1,8 @@
+PIECE_NAME="cloud"
+PIECE_TITLE="Cloud & sync"
+PIECE_DESC="rclone, aws-cli, restic"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(rclone aws-cli restic)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES=""

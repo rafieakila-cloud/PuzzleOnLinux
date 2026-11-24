@@ -1,0 +1,16 @@
+# Bunglon Core 🦎 — jalankan aplikasi desktop dari terminal.
+PIECE_NAME="bunglon-core"
+PIECE_TITLE="Bunglon Core — compatibility layer"
+PIECE_DESC="run <app>: download + jalankan aplikasi desktop lewat pacman"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(xorg-server-xvfb x11vnc xorg-xauth mesa ttf-dejavu)
+PIECE_SERVICES=()
+PIECE_ASSETS=(
+  usr/local/bin/bunglon
+  usr/local/bin/run
+  usr/local/bin/taskbar-all
+  etc/bunglon.conf
+  etc/bunglon/apps.conf
+  etc/profile.d/bunglon.sh
+)
+PIECE_NOTES="Perintah: run firefox | /menu/start | /taskbar-all | go-to-taskbar/firefox | /uninstalled b- firefox"

@@ -1,0 +1,9 @@
+# Shell default Puzzle + prompt khas.
+PIECE_NAME="bash"
+PIECE_TITLE="Shell Puzzle"
+PIECE_DESC="bash + completion + prompt puzzle@piece"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(bash bash-completion)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES="Prompt & alias dioprek lewat: ./puzzle ui root/.bashrc"

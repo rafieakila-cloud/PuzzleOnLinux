@@ -1,0 +1,15 @@
+# Auto Setup — konfigurasi sistem otomatis saat boot pertama.
+PIECE_NAME="auto-setup"
+PIECE_TITLE="Auto Setup — sistem siap pakai"
+PIECE_DESC="hostname, locale, timezone, dhcpcd, user, sudo, mirror otomatis"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(sudo reflector)
+PIECE_SERVICES=()
+PIECE_ASSETS=(
+  usr/local/bin/puzzle-firstboot
+  etc/profile.d/puzzle-firstboot.sh
+  etc/puzzle/hostname
+  etc/puzzle/timezone
+  etc/puzzle/user
+)
+PIECE_NOTES="Edit nilai di assets/etc/puzzle/ sebelum build. Berjalan sekali saat login pertama."

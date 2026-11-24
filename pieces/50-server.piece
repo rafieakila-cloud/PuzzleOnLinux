@@ -1,0 +1,8 @@
+PIECE_NAME="server"
+PIECE_TITLE="Tool server & jaringan lanjutan"
+PIECE_DESC="openssh, tcpdump, screen, socat, nload"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(openssh tcpdump screen socat nload rsync)
+PIECE_SERVICES=(sshd.service)
+PIECE_ASSETS=()
+PIECE_NOTES="Aktifkan sshd manual: systemctl enable --now sshd"

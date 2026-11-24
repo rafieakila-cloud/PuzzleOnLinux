@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Puzzle Update — tarik keping/resep terbaru dari repo git.
+set -uo pipefail
+CFG='/etc/puzzle/repo.conf'
+SRC="${HOME:-/root}/.cache/puzzle-source"
+C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_GREEN=$'\033[32m'; C_CYAN=$'\033[36m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'
+i() { printf '%s[*]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+g() { printf '%s[✓]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+w() { printf '%s[!]%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+e() { printf '%s[x]%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+command -v git >/dev/null 2>&1 || { e 'Butuh git.'; exit 1; }
+url=''
+[[ -f "$CFG" ]] && source "$CFG"
+url="${PUZZLE_GIT_URL:-}"
+[[ -n "$url" && "$url" != *USER* ]] || { e "Set PUZZLE_GIT_URL di $CFG dulu."; exit 1; }
+if [[ -d "$SRC/.git" ]]; then
+  i "Menarik update dari $url"
+  (cd "$SRC" && git pull --ff-only) || exit 1
+else
+  i "Clone ke $SRC"
+  git clone --depth 1 "$url" "$SRC" || exit 1
+fi
+g "Source terbaru di $SRC"
+printf '%sKeping:%s %s\n' "$C_BOLD" "$C_RESET" "$(find "$SRC/pieces" -name '*.piece' 2>/dev/null | wc -l)"
+printf '%sResep :%s %s\n' "$C_BOLD" "$C_RESET" "$(find "$SRC/recipes" -name '*.recipe' 2>/dev/null | wc -l)"
+if [[ "${1:-}" == '--apply' ]]; then
+  w 'Menyalin aset & keping baru...'
+  for d in assets configs; do
+    if [[ -d "$SRC/$d" ]]; then
+      mkdir -p "/etc/puzzle/$d"
+      cp -a "$SRC/$d/." "/etc/puzzle/$d/" 2>/dev/null || true
+    fi
+  done
+  g 'Selesai. Cek dengan puzzle doctor.'
+fi

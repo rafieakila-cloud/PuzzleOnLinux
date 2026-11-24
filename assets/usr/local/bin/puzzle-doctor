@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Puzzle Doctor — cek kesehatan sistem & hasil rakitannya.
+set -uo pipefail
+C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'
+ok()  { printf '  %s[OK]%s   %s\n' "$C_GREEN" "$C_RESET" "$1"; }
+wr()  { printf '  %s[WARN]%s %s\n' "$C_YELLOW" "$C_RESET" "$1"; }
+bad() { printf '  %s[FAIL]%s %s\n' "$C_RED" "$C_RESET" "$1"; }
+printf '\n%s  PUZZLE DOCTOR  —  cek kesehatan sistem%s\n\n' "$C_BOLD" "$C_RESET"
+check() { if eval "$2" >/dev/null 2>&1; then ok "$1"; else bad "$1"; fi; }
+printf '%sKomponen inti:%s\n' "$C_BOLD" "$C_RESET"
+check 'bash'        'command -v bash'
+check 'pacman'      'command -v pacman'
+check 'kernel'      'command -v kernel'
+check 'bunglon'     'command -v bunglon'
+check 'gui builder' 'command -v gui'
+printf '\n%sHasil rakitannya:%s\n' "$C_BOLD" "$C_RESET"
+[[ -f /etc/puzzle/pieces ]] && ok "Daftar keping ($(wc -l < /etc/puzzle/pieces))" || bad 'Daftar keping tidak ada'
+[[ -f /etc/puzzle/version ]] && ok "Versi: $(cat /etc/puzzle/version)" || wr 'Versi tidak tercatat'
+command -v pacman >/dev/null 2>&1 && {
+  [[ -s /etc/pacman.d/mirrorlist ]] && ok 'Mirrorlist ada' || bad 'Mirrorlist kosong'
+  [[ -f /var/lib/pacman/db.lck ]] && wr 'pacman terkunci' || ok 'pacman tidak terkunci'
+}
+printf '\n%sSistem:%s\n' "$C_BOLD" "$C_RESET"
+[[ -f /etc/puzzle/.firstboot-done ]] && ok 'First boot selesai' || wr 'First boot belum jalan'
+if command -v systemctl >/dev/null 2>&1; then
+  failed="$(systemctl --failed --no-legend --no-pager 2>/dev/null | wc -l)"
+  [[ "$failed" -eq 0 ]] && ok 'Tidak ada service gagal' || wr "$failed service gagal"
+fi
+used="$(df -h / | awk 'NR==2 {gsub(/%/,"",$5); print $5}')"
+[[ "${used:-0}" -lt 90 ]] && ok "Disk pakai ${used}%" || wr "Disk hampir penuh: ${used}%"
+printf '\n'

@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Puzzle Snapshot — backup sebelum otak-atik kernel / sistem.
+set -uo pipefail
+DIR='/var/backups/puzzle'
+mkdir -p "$DIR"
+C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_GREEN=$'\033[32m'; C_CYAN=$'\033[36m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'
+i() { printf '%s[*]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+g() { printf '%s[✓]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+w() { printf '%s[!]%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+e() { printf '%s[x]%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+usage() {
+  cat <<'EOF'
+Puzzle Snapshot
+
+  puzzle snapshot create [label]   buat snapshot/backup
+  puzzle snapshot list             tampilkan backup
+EOF
+}
+do_create() {
+  local label="${1:-$(date '+%Y%m%d-%H%M')}" name="puzzle-$label"
+  if command -v btrfs >/dev/null 2>&1 && btrfs filesystem show / 2>/dev/null | grep -q 'Label\|uuid'; then
+    mkdir -p /.puzzle-snapshots
+    btrfs subvolume snapshot / "/.puzzle-snapshots/$name" && g "Snapshot Btrfs: /.puzzle-snapshots/$name"
+    return $?
+  fi
+  local out="$DIR/$name.tar.zst"
+  command -v zstd >/dev/null 2>&1 || { e 'Butuh zstd.'; return 1; }
+  i "Membuat arsip: $out"
+  tar --exclude="$DIR" -C / -cf - etc boot usr/local var/lib/pacman 2>/dev/null \
+    | zstd -q -T0 -o "$out" || { e 'Gagal membuat arsip.'; return 1; }
+  g "Backup selesai: $out ($(du -h "$out" | cut -f1))"
+}
+do_list() {
+  printf '%sBackup:%s\n' "$C_BOLD" "$C_RESET"
+  local found=0 f
+  for f in "$DIR"/*.tar.zst /.puzzle-snapshots/*; do
+    [[ -e "$f" ]] || continue
+    printf '  %s  %s\n' "$(du -h "$f" | cut -f1)" "$f"
+    found=1
+  done
+  ((found == 0)) && printf '  (belum ada backup)\n'
+}
+case "${1:-help}" in
+  create) shift; do_create "$@" ;;
+  list)   do_list ;;
+  help|-h|--help|'') usage ;;
+  *) e "Perintah '${1}' tidak dikenal."; usage; exit 1 ;;
+esac

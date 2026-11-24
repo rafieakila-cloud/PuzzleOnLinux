@@ -1,0 +1,8 @@
+PIECE_NAME="fun"
+PIECE_TITLE="Permainan terminal"
+PIECE_DESC="figlet, lolcat, cowsay, neofetch, cmatrix, fortune"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(figlet lolcat cowsay neofetch cmatrix fortune-mod)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES="Coba: neofetch | lolcat"

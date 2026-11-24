@@ -1,0 +1,17 @@
+# Pro Tools — fitur lanjutan Puzzle On Linux.
+PIECE_NAME="pro-tools"
+PIECE_TITLE="Pro Tools — dashboard, doctor, snapshot, repo, splash"
+PIECE_DESC="puzzle status/doctor/snapshot/update/repo/splash"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(btrfs-progs plymouth zstd rsync git jq)
+PIECE_SERVICES=()
+PIECE_ASSETS=(
+  usr/local/bin/puzzle-status
+  usr/local/bin/puzzle-doctor
+  usr/local/bin/puzzle-snapshot
+  usr/local/bin/puzzle-update
+  usr/local/bin/puzzle-repo
+  usr/local/bin/puzzle-splash
+  etc/puzzle/repo.conf
+)
+PIECE_NOTES="Edit assets/etc/puzzle/repo.conf sebelum build."

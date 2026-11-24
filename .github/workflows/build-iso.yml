@@ -1,0 +1,61 @@
+name: Build Puzzle On Linux ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      recipe:
+        description: 'Nama resep yang dirakit'
+        required: true
+        default: 'bunglon'
+        type: string
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'puzzle'
+      - 'lib/**'
+      - 'pieces/**'
+      - 'recipes/**'
+      - 'assets/**'
+      - 'configs/**'
+      - '.github/workflows/build-iso.yml'
+
+env:
+  RECIPE: ${{ github.event.inputs.recipe || 'bunglon' }}
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Ambil source
+        uses: actions/checkout@v4
+
+      - name: Pastikan script bisa dibaca
+        run: chmod -R a+rX .
+
+      - name: Build ISO di container Arch Linux
+        run: |
+          mkdir -p out work
+          docker run --privileged --rm \
+            -v "$PWD:/puzzle" \
+            -w /puzzle \
+            -e "RECIPE=$RECIPE" \
+            archlinux:base \
+            bash -euxo pipefail -c '
+              pacman-key --init
+              pacman-key --populate archlinux
+              pacman -Syu --noconfirm archlinux-keyring
+              pacman -Syu --noconfirm archiso
+              bash puzzle build "$RECIPE"
+              ls -lh out/*.iso
+            '
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: puzzle-on-linux-${{ env.RECIPE }}
+          path: out/*.iso
+          if-no-files-found: error
+          retention-days: 30

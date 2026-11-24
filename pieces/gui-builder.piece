@@ -1,0 +1,9 @@
+# GUI Builder — GUI on-demand, TIDAK mengubah boot terminal-only.
+PIECE_NAME="gui-builder"
+PIECE_TITLE="GUI Builder — pengguna bangun GUI sendiri"
+PIECE_DESC="gui build/start/stop/status (openbox atau xfce), tanpa display manager"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(xorg-xinit x11vnc)
+PIECE_SERVICES=()
+PIECE_ASSETS=(usr/local/bin/gui)
+PIECE_NOTES="Puzzle On Linux tetap boot ke terminal. GUI dipasang manual: gui build openbox && gui start"

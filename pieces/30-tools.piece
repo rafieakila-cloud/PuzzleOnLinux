@@ -1,0 +1,8 @@
+PIECE_NAME="tools"
+PIECE_TITLE="Tool harian"
+PIECE_DESC="curl, git, ripgrep, fzf, htop, tmux, micro, zoxide"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(curl wget git ripgrep fd fzf htop tmux micro zoxide jq tree unzip zip rsync)
+PIECE_SERVICES=()
+PIECE_ASSETS=()
+PIECE_NOTES="Tool favorit bisa ditambah dengan: ./puzzle add <nama-paket>"

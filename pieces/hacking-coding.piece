@@ -1,0 +1,13 @@
+# Hacking & Coding toolkit.
+PIECE_NAME="hacking-coding"
+PIECE_TITLE="Hacking & Coding Toolkit"
+PIECE_DESC="hack scan/ports/sniff/wifi/hash/dns + code new/build/run"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(
+  nmap tcpdump tshark aircrack-ng hydra john hashcat
+  bind-utils gnu-netcat gdb ltrace strace valgrind radare2
+  base-devel cmake python nodejs go rust neovim git
+)
+PIECE_SERVICES=()
+PIECE_ASSETS=(usr/local/bin/hack usr/local/bin/code)
+PIECE_NOTES="Gunakan hack hanya pada target yang diizinkan."

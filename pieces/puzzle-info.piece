@@ -1,0 +1,13 @@
+# Puzzle Info — fastfetch + task manager bawaan.
+PIECE_NAME="puzzle-info"
+PIECE_TITLE="Puzzle Info — fastfetch & task manager"
+PIECE_DESC="fastfetch dengan logo puzzle + kunci inggris, btop/htop bawaan"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(fastfetch btop htop)
+PIECE_SERVICES=()
+PIECE_ASSETS=(
+  usr/local/bin/puzzlefetch
+  etc/fastfetch/puzzle.conf
+  etc/fastfetch/puzzle-logo.txt
+)
+PIECE_NOTES="Jalankan: puzzlefetch (alias pf). Task manager: bunglon task / btop."

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Tampilkan taskbar Puzzle.
+exec bunglon taskbar-all "$@"

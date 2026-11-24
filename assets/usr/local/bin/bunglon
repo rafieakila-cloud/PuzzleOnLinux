@@ -1,0 +1,354 @@
+#!/usr/bin/env bash
+# Bunglon 🦎 — lapisan kompatibilitas Puzzle Linux.
+# Terminal-only di boot, tapi bisa mengunduh & menjalankan aplikasi/game desktop.
+set -uo pipefail
+
+CONF='/etc/bunglon.conf'
+APPDB='/etc/bunglon/apps.conf'
+GAMEDB='/etc/bunglon/games.conf'
+PINFILE="${HOME:-/root}/.config/bunglon/taskbar"
+LOGDIR="${HOME:-/root}/.local/state/bunglon"
+
+[[ -f "$CONF" ]] && source "$CONF"
+DISPLAY_MODE="${DISPLAY_MODE:-vnc}"
+DISPLAY_NUM="${DISPLAY_NUM:-99}"
+VNC_PORT="${VNC_PORT:-5900}"
+VNC_HOST="${VNC_HOST:-0.0.0.0}"
+
+mkdir -p "$(dirname "$PINFILE")" "$LOGDIR"
+touch "$PINFILE"
+
+C_RESET=$'\033[0m'; C_GREEN=$'\033[32m'; C_CYAN=$'\033[36m'; C_YELLOW=$'\033[33m'; C_RED=$'\033[31m'; C_BOLD=$'\033[1m'
+i() { printf '%s[*]%s %s\n' "$C_CYAN" "$C_RESET" "$*"; }
+g() { printf '%s[✓]%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+w() { printf '%s[!]%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+e() { printf '%s[x]%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+
+usage() {
+  cat <<'EOF'
+Bunglon 🦎 — jalankan aplikasi & game desktop dari terminal Puzzle.
+
+  run <nama>                  unduh + jalankan aplikasi desktop
+  play <nama>                 unduh + jalankan game
+  /taskbar-all                tampilkan taskbar
+  /menu/start                 buka Start Menu (semua fitur)
+  go-to-taskbar/<nama>        pin aplikasi ke taskbar
+  /uninstalled b- <nama>      uninstall aplikasi
+
+  bunglon apps                daftar aplikasi terpasang
+  bunglon mobility            Wi-Fi, volume, baterai, brightness
+  bunglon power               suspend / reboot / shutdown / logout
+  bunglon logs                Event Viewer (journalctl)
+  bunglon system              informasi sistem
+  bunglon devices             Device Manager (PCI/USB)
+  bunglon net                 koneksi jaringan
+  bunglon disk                manajemen disk
+  bunglon manage              Computer Management
+  bunglon task                Task Manager (btop/htop)
+  bunglon settings            Settings (edit konfigurasi)
+  bunglon files               File Explorer
+  bunglon search <kata>       cari aplikasi/paket
+  bunglon desktop             mulai sesi desktop on-demand
+EOF
+}
+
+db_lookup() {
+  local db="$1" key="$2" row
+  [[ -f "$db" ]] || return 1
+  row="$(awk -F'|' -v k="$key" '$1==k {print $2 "|" $3; exit}' "$db")"
+  [[ -n "$row" ]] || return 1
+  printf '%s' "$row"
+}
+
+install_pkgs() {
+  local pkgs=() p
+  for p in "$@"; do
+    [[ -n "$p" ]] && pkgs+=("$p")
+  done
+  ((${#pkgs[@]} == 0)) && return 0
+  command -v pacman >/dev/null 2>&1 || { e 'pacman tidak ditemukan (Bunglon butuh Arch).'; return 1; }
+  i "pacman -S --needed --noconfirm ${pkgs[*]}"
+  pacman -S --needed --noconfirm "${pkgs[@]}"
+}
+
+display_pkgs() {
+  local base=(xorg-server-xvfb x11vnc mesa ttf-dejavu xorg-xauth)
+  case "$DISPLAY_MODE" in
+    vnc)   printf '%s\n' "${base[@]}" ;;
+    local) printf '%s\n' xorg-server mesa ttf-dejavu openbox xorg-xinit ;;
+    *)     printf '%s\n' "${base[@]}" ;;
+  esac
+}
+
+ensure_display() {
+  if [[ -n "${DISPLAY:-}" ]]; then
+    printf '%s' "$DISPLAY"
+    return 0
+  fi
+
+  local n="$DISPLAY_NUM"
+  mapfile -t dp < <(display_pkgs)
+  install_pkgs "${dp[@]}" || return 1
+
+  if [[ "$DISPLAY_MODE" == "local" ]]; then
+    i "Menyiapkan sesi lokal (startx + openbox)..."
+    printf 'exec openbox-session\n' > "$HOME/.xinitrc"
+    startx -- :"$n" >"$LOGDIR/x.log" 2>&1 &
+    printf ':%s' "$n"
+    return 0
+  fi
+
+  if ! pgrep -f "Xvfb :$n" >/dev/null 2>&1; then
+    i "Menyalakan Xvfb :$n"
+    Xvfb :"$n" -screen 0 1280x800x24 -nolisten tcp >"$LOGDIR/xvfb.log" 2>&1 &
+    sleep 1
+  fi
+  if ! pgrep -f "x11vnc.*$VNC_PORT" >/dev/null 2>&1; then
+    i "Menyalakan VNC di port $VNC_PORT"
+    x11vnc -display ":$n" -nopw -forever -listen "$VNC_HOST" -rfbport "$VNC_PORT" \
+      >"$LOGDIR/vnc.log" 2>&1 &
+    sleep 1
+  fi
+  g "Tampilan siap. Buka vnc://<IP-Puzzle>:$VNC_PORT dari HP/PC lain."
+  printf ':%s' "$n"
+}
+
+split_deps() {
+  local raw="$1" out=() d
+  IFS=',' read -ra out <<< "$raw"
+  for d in "${out[@]}"; do
+    d="$(echo "$d" | xargs)"
+    [[ -n "$d" ]] && printf '%s\n' "$d"
+  done
+}
+
+do_run() {
+  local key="${1:-}"
+  [[ -n "$key" ]] || { e "Usage: run <nama-aplikasi>"; return 1; }
+
+  local row pkg deps bin
+  if row="$(db_lookup "$APPDB" "$key")"; then
+    pkg="${row%%|*}"
+    deps="${row#*|}"
+  else
+    w "'$key' tidak ada di database — dicoba sebagai nama paket Arch."
+    pkg="$key"; deps=''
+  fi
+  bin="${key%% *}"
+
+  mapfile -t dep_list < <(split_deps "$deps")
+  local dpa=()
+  mapfile -t dpa < <(display_pkgs)
+  install_pkgs "$pkg" "${dep_list[@]}" "${dpa[@]}" || return 1
+
+  local dsp
+  dsp="$(ensure_display)" || return 1
+  i "Menjalankan $bin di DISPLAY=$dsp ..."
+  DISPLAY="$dsp" nohup "$bin" >"$LOGDIR/$key.log" 2>&1 &
+  g "$bin jalan. Log: $LOGDIR/$key.log"
+}
+
+do_play() {
+  local key="${1:-}"
+  [[ -n "$key" ]] || { e "Usage: play <nama-game>"; return 1; }
+
+  local row pkg deps bin
+  if row="$(db_lookup "$GAMEDB" "$key")"; then
+    pkg="${row%%|*}"; deps="${row#*|}"
+  else
+    w "'$key' tidak ada di database — dicoba sebagai nama paket Arch."
+    pkg="$key"; deps=''
+  fi
+  bin="${key%% *}"
+
+  mapfile -t dep_list < <(split_deps "$deps")
+  local dpa=()
+  mapfile -t dpa < <(display_pkgs)
+  install_pkgs "$pkg" "${dep_list[@]}" "${dpa[@]}" sdl2 alsa-lib libpulse || return 1
+
+  local dsp
+  dsp="$(ensure_display)" || return 1
+  i "Menjalankan game $bin di DISPLAY=$dsp ..."
+  DISPLAY="$dsp" nohup "$bin" >"$LOGDIR/$key.log" 2>&1 &
+  g "$bin jalan. Log: $LOGDIR/$key.log"
+}
+
+do_taskbar_all() {
+  printf '%s\n' '────────────────────────────────────────────────────────────'
+  printf '%s' '  '
+  local app n=0
+  while IFS= read -r app; do
+    [[ -n "$app" ]] || continue
+    printf '%s[%s]%s ' "$C_BOLD" "$app" "$C_RESET"
+    n=$((n+1))
+  done < "$PINFILE"
+  ((n == 0)) && printf '%s(belum ada aplikasi di-pin — go-to-taskbar/<nama>)%s' "$C_DIM" "$C_RESET"
+  printf '  |  /menu/start  %s  %s\n' "$(date '+%H:%M')" "$(date '+%d-%m')"
+  printf '%s\n' '────────────────────────────────────────────────────────────'
+}
+
+do_menu_start() {
+  cat <<'EOF'
+
+  ┌─ Puzzle Start Menu /menu/start ──────────────────────────┐
+EOF
+  local menu=(
+    'Installed apps|bunglon apps'
+    'Mobility Center|bunglon mobility'
+    'Power Options|bunglon power'
+    'Event Viewer|bunglon logs'
+    'System|bunglon system'
+    'Device Manager|bunglon devices'
+    'Network Connections|bunglon net'
+    'Disk Management|bunglon disk'
+    'Computer Management|bunglon manage'
+    'Terminal|bash'
+    'Terminal (Admin)|sudo -i'
+    'Task Manager|bunglon task'
+    'Settings|bunglon settings'
+    'File Explorer|bunglon files'
+    'Search|bunglon search <kata>'
+    'Run|run <nama>'
+    'Shut down or sign out|bunglon power'
+    'Desktop|bunglon desktop'
+  )
+  local item label cmd
+  for item in "${menu[@]}"; do
+    label="${item%%|*}"; cmd="${item#*|}"
+    printf '  │ %-24s %s\n' "$label" "$cmd"
+  done
+  cat <<'EOF'
+  └──────────────────────────────────────────────────────────┘
+
+  Pin ke taskbar : go-to-taskbar/<nama>
+  Lihat taskbar  : /taskbar-all
+  Uninstall      : /uninstalled b- <nama>
+EOF
+}
+
+do_pin() {
+  local app="${1:-}"
+  [[ -n "$app" ]] || { e "Usage: go-to-taskbar/<nama>"; return 1; }
+  grep -Fxq "$app" "$PINFILE" && { w "'$app' sudah di taskbar."; return 0; }
+  printf '%s\n' "$app" >> "$PINFILE"
+  g "'$app' di-pin ke taskbar."
+}
+
+do_uninstall() {
+  local app="${1:-}"
+  # Terima bentuk: /uninstalled b- firefox
+  if [[ "$app" == 'b-' ]]; then shift; app="${1:-}"; fi
+  [[ -n "$app" ]] || { e "Usage: /uninstalled b- <nama>"; return 1; }
+  local row pkg
+  if row="$(db_lookup "$APPDB" "$app")" || row="$(db_lookup "$GAMEDB" "$app")"; then
+    pkg="${row%%|*}"
+  else
+    pkg="$app"
+  fi
+  command -v pacman >/dev/null 2>&1 || { e 'pacman tidak ditemukan.'; return 1; }
+  pacman -Rns --noconfirm "$pkg" || return 1
+  grep -Fxv "$app" "$PINFILE" > "$PINFILE.tmp" || true
+  mv "$PINFILE.tmp" "$PINFILE"
+  g "'$app' selesai di-uninstall & dibuang dari taskbar."
+}
+
+do_apps() {
+  printf '%sAplikasi terpasang (pacman -Q):%s\n' "$C_BOLD" "$C_RESET"
+  pacman -Q 2>/dev/null | head -n 200
+}
+
+do_mobility() {
+  printf '%sMobility Center 🦎%s\n' "$C_BOLD" "$C_RESET"
+  i 'Jaringan:'; ip -br link 2>/dev/null || true
+  i 'Volume:'; pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null || w 'pactl tidak tersedia'
+  i 'Baterai:'; upower -e 2>/dev/null || w 'upower tidak tersedia'
+  i 'Brightness:'; brightnessctl get 2>/dev/null || w 'brightnessctl tidak tersedia'
+}
+
+do_power() {
+  printf '%sPower Options%s\n' "$C_BOLD" "$C_RESET"
+  printf '  1) Suspend   2) Reboot   3) Shutdown   4) Logout\n'
+  read -rp '  Pilih [1-4]: ' c
+  case "$c" in
+    1) systemctl suspend ;;
+    2) reboot ;;
+    3) poweroff ;;
+    4) loginctl terminate-user "${USER:-root}" ;;
+    *) w 'Pilihan tidak valid.' ;;
+  esac
+}
+
+do_logs()   { journalctl -n 50 --no-pager 2>/dev/null || w 'journalctl tidak tersedia'; }
+do_system() { hostnamectl 2>/dev/null; uname -a; printf 'Paket terpasang: '; pacman -Q 2>/dev/null | wc -l; }
+do_devices(){ printf '%sPCI:%s\n' "$C_BOLD" "$C_RESET"; lspci 2>/dev/null; printf '\n%sUSB:%s\n' "$C_BOLD" "$C_RESET"; lsusb 2>/dev/null; }
+do_net()    { ip -br address 2>/dev/null; printf '\n'; ip route 2>/dev/null; }
+do_disk()   { lsblk -f 2>/dev/null; printf '\n'; df -h 2>/dev/null; }
+do_manage() { systemctl list-units --type=service --state=running --no-pager 2>/dev/null | head -n 60; }
+do_settings(){ "${EDITOR:-vi}" /etc/bunglon.conf "$PINFILE"; }
+do_search() {
+  local q="${1:-}"
+  [[ -n "$q" ]] || { e 'Usage: bunglon search <kata>'; return 1; }
+  i "Katalog Bunglon:"
+  grep -i -- "$q" "$APPDB" "$GAMEDB" 2>/dev/null || w 'Tidak ada di katalog.'
+  i 'Repo Arch:'
+  pacman -Ss -- "$q" 2>/dev/null | head -n 40
+}
+do_task() {
+  local t
+  for t in btop htop top; do
+    if command -v "$t" >/dev/null 2>&1; then exec "$t"; fi
+  done
+  w 'Task Manager tidak tersedia. Tambah keping tools/server.'
+}
+do_files() {
+  local t
+  for t in ranger lf mc nnn; do
+    if command -v "$t" >/dev/null 2>&1; then exec "$t"; fi
+  done
+  exec ls -la
+}
+do_desktop() {
+  install_pkgs xorg-server openbox xorg-xinit mesa ttf-dejavu || return 1
+  local dsp
+  dsp="$(ensure_display)" || return 1
+  DISPLAY="$dsp" nohup openbox-session >"$LOGDIR/desktop.log" 2>&1 &
+  g "Desktop on-demand aktif di DISPLAY=$dsp."
+}
+
+dispatch() {
+  case "${1:-}" in
+    /taskbar-all)      do_taskbar_all ;;
+    /menu/*)           do_menu_start ;;
+    /uninstalled)      shift; do_uninstall "$@" ;;
+    go-to-taskbar/*)   do_pin "${1#go-to-taskbar/}" ;;
+    run)               shift; do_run "$@" ;;
+    play)              shift; do_play "$@" ;;
+    *)                 return 1 ;;
+  esac
+}
+
+case "${1:-help}" in
+  run)         shift; do_run "$@" ;;
+  play)        shift; do_play "$@" ;;
+  dispatch)    shift; dispatch "$@" ;;
+  taskbar-all) do_taskbar_all ;;
+  menu)        shift; [[ "${1:-}" == 'start' ]] && do_menu_start || do_menu_start ;;
+  pin)         shift; do_pin "$@" ;;
+  uninstall)   shift; do_uninstall "$@" ;;
+  apps)        do_apps ;;
+  mobility)    do_mobility ;;
+  power)       do_power ;;
+  logs)        do_logs ;;
+  system)      do_system ;;
+  devices)     do_devices ;;
+  net)         do_net ;;
+  disk)        do_disk ;;
+  manage)      do_manage ;;
+  task)        do_task ;;
+  settings)    do_settings ;;
+  files)       do_files ;;
+  search)      shift; do_search "$@" ;;
+  desktop)     do_desktop ;;
+  help|-h|--help|'') usage ;;
+  *) e "Perintah '${1}' tidak dikenal. Coba: bunglon help"; usage; return 1 2>/dev/null || exit 1 ;;
+esac

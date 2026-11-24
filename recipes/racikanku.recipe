@@ -1,0 +1,4 @@
+# Resep minimal — contoh dasar. Bebas diubah/dihapus.
+RECIPE_NAME="racikanku"
+RECIPE_DESC="Resep racikan racikanku (berbasis minimal)"
+PIECES=( "base" "bash" "network" "docs" "bunglon-core" )

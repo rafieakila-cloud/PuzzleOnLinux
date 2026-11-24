@@ -1,0 +1,4 @@
+# Contoh resep untuk server ringan (bukan bawaan wajib).
+RECIPE_NAME="server"
+RECIPE_DESC="Contoh: server + security + cloud"
+PIECES=( base bash network server security cloud docs installer )

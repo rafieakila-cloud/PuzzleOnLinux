@@ -1,0 +1,12 @@
+# Bunglon Play 🎮 — jalankan game dari terminal.
+PIECE_NAME="bunglon-play"
+PIECE_TITLE="Bunglon Play — game on-demand"
+PIECE_DESC="play <game>: download + jalankan game (native/retro/wine)"
+PIECE_REQUIRED=0
+PIECE_PACKAGES=(sdl2 alsa-lib libpulse)
+PIECE_SERVICES=()
+PIECE_ASSETS=(
+  usr/local/bin/play
+  etc/bunglon/games.conf
+)
+PIECE_NOTES="Contoh: play supertux | play retroarch | play wine"
