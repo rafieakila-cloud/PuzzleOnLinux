@@ -4,8 +4,8 @@ PIECE_TITLE="Hacking & Coding Toolkit"
 PIECE_DESC="hack scan/ports/sniff/wifi/hash/dns + code new/build/run"
 PIECE_REQUIRED=0
 PIECE_PACKAGES=(
-  nmap tcpdump tshark aircrack-ng hydra john hashcat
-  bind-utils gnu-netcat gdb ltrace strace valgrind radare2
+  nmap tcpdump wireshark-cli aircrack-ng hydra john hashcat
+  bind gdb ltrace strace valgrind radare2
   base-devel cmake python nodejs go rust neovim git
 )
 PIECE_SERVICES=()
